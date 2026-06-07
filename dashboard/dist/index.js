@@ -5,32 +5,40 @@
   function injectPwaManifest() {
     if (document.querySelector('link[rel="manifest"]')) return;
 
+    // PWA manifest
     const link = document.createElement('link');
     link.rel = 'manifest';
     link.href = '/dashboard-plugins/hermes-pwa-support/pwa-manifest.json';
     document.head.appendChild(link);
 
-    // Extra meta
+    // iOS / Apple specific icons
+    const apple180 = document.createElement('link');
+    apple180.rel = 'apple-touch-icon';
+    apple180.href = '/dashboard-plugins/hermes-pwa-support/icons/icon-192.png';
+    document.head.appendChild(apple180);
+
+    const apple512 = document.createElement('link');
+    apple512.rel = 'apple-touch-icon';
+    apple512.sizes = '512x512';
+    apple512.href = '/dashboard-plugins/hermes-pwa-support/icons/icon-512.png';
+    document.head.appendChild(apple512);
+
+    // Theme color
     const meta = document.createElement('meta');
     meta.name = 'theme-color';
     meta.content = '#000000';
     document.head.appendChild(meta);
 
-    console.log('[PWA] Manifest injected successfully');
+    console.log('[PWA] Manifest + iOS icons injected');
   }
 
-  // Wait until the dashboard is fully loaded and user is authenticated
+  // Wait until logged in
   const checkLoggedIn = setInterval(() => {
-    // Look for any element that only appears after login (dashboard UI)
-    if (document.querySelector('.dashboard, .main, [data-testid], nav, header')) {
+    if (document.querySelector('.dashboard, .main, nav, header')) {
       clearInterval(checkLoggedIn);
       injectPwaManifest();
     }
   }, 500);
 
-  // Fallback: also try on full page load
-  window.addEventListener('load', () => {
-    if (document.querySelector('link[rel="manifest"]')) return;
-    setTimeout(injectPwaManifest, 1500);
-  });
+  window.addEventListener('load', () => setTimeout(injectPwaManifest, 2000));
 })();
