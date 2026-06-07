@@ -3,44 +3,72 @@
   if (!sdk) return console.warn('[PWA] Plugin SDK not found');
 
   async function injectPwaManifest() {
+    // Prevent duplicate injection
     if (document.querySelector('link[rel="manifest"]')) return;
 
     try {
-      // Verify the manifest is actually valid JSON before injecting
-      const res = await fetch('/dashboard-plugins/hermes-pwa-support/pwa-manifest.json', {
-        credentials: 'include'
+      // Fetch from our backend API route (properly authenticated)
+      const res = await fetch('/api/plugins/hermes-pwa-support/pwa-manifest', {
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' }
       });
 
-      if (!res.ok) throw new Error('Manifest not ready');
+      if (!res.ok) {
+        console.warn('[PWA] Manifest API returned', res.status);
+        return;
+      }
 
-      const data = await res.json();
-      if (!data.name) throw new Error('Invalid manifest');
+      const manifestData = await res.json();
 
-      // Safe to inject now
+      // Create a Blob URL so the browser never hits the static file path
+      const blob = new Blob([JSON.stringify(manifestData, null, 2)], {
+        type: 'application/manifest+json'
+      });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Inject the manifest link using the Blob URL
       const link = document.createElement('link');
       link.rel = 'manifest';
-      link.href = '/dashboard-plugins/hermes-pwa-support/pwa-manifest.json';
+      link.href = blobUrl;
       document.head.appendChild(link);
 
-      // iOS icons
+      // iOS / Safari icons (still use static paths - they work after login)
       const apple180 = document.createElement('link');
       apple180.rel = 'apple-touch-icon';
       apple180.href = '/dashboard-plugins/hermes-pwa-support/icons/icon-192.png';
       document.head.appendChild(apple180);
 
-      console.log('[PWA] Manifest + iOS icons injected successfully');
+      const apple512 = document.createElement('link');
+      apple512.rel = 'apple-touch-icon';
+      apple512.sizes = '512x512';
+      apple512.href = '/dashboard-plugins/hermes-pwa-support/icons/icon-512.png';
+      document.head.appendChild(apple512);
+
+      // Theme color
+      const meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      meta.content = '#000000';
+      document.head.appendChild(meta);
+
+      console.log('[PWA] Manifest + iOS icons injected successfully (via Blob URL)');
     } catch (e) {
-      console.warn('[PWA] Manifest not ready yet, retrying...');
+      console.warn('[PWA] Could not inject manifest yet:', e.message);
     }
   }
 
-  // Aggressive retry until it works
+  // Keep retrying until we succeed (max ~15 seconds)
   let attempts = 0;
   const interval = setInterval(() => {
-    if (attempts++ > 30) return clearInterval(interval); // max 15 seconds
+    attempts++;
+    if (attempts > 30) {
+      clearInterval(interval);
+      return;
+    }
     injectPwaManifest();
   }, 500);
 
-  // Also try on full load
-  window.addEventListener('load', () => setTimeout(injectPwaManifest, 2000));
+  // Also try once the page is fully loaded
+  window.addEventListener('load', () => {
+    setTimeout(injectPwaManifest, 1500);
+  });
 })();
