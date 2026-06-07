@@ -3,9 +3,10 @@
   "label": "PWA Support",
   "description": "Adds full Progressive Web App support (install prompt, homescreen, standalone) to the Hermes dashboard",
   "icon": "Download",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "tab": {
     "hidden": true
   },
-  "entry": "dist/index.js"
+  "entry": "dist/index.js",
+  "api": "plugin_api.py"
 }
